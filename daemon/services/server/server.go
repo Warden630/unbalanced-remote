@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
@@ -179,25 +180,41 @@ type QueryPath struct {
 
 func (s *Server) getTree(c echo.Context) error {
 	param := c.Param("route")
-	u, err := url.Parse(param)
-	if err != nil {
-		return err
-	}
+	route := unescapeRoute(param)
 
-	path := filepath.Join("/", "mnt", path.Clean(u.Path))
+	path := storagePathFromRoute(route)
 	id := c.QueryParam("id")
 
 	return c.JSON(200, s.core.GetTree(path, id))
 }
 
-func (s *Server) locate(c echo.Context) error {
-	param := c.Param("route")
-	u, err := url.Parse(param)
+func unescapeRoute(route string) string {
+	decoded, err := url.PathUnescape(route)
 	if err != nil {
-		return err
+		return route
+	}
+	return decoded
+}
+
+func storagePathFromRoute(route string) string {
+	clean := path.Clean("/" + strings.TrimPrefix(route, "/"))
+	if clean == "/" {
+		return filepath.Join("/", "mnt")
 	}
 
-	path := filepath.Join("/", "mnt", "user", path.Clean(u.Path))
+	if clean == "/mnt" || strings.HasPrefix(clean, "/mnt/") {
+		return filepath.FromSlash(clean)
+	}
+
+	return filepath.Join("/", "mnt", filepath.FromSlash(strings.TrimPrefix(clean, "/")))
+}
+
+func (s *Server) locate(c echo.Context) error {
+	param := c.Param("route")
+	route := unescapeRoute(param)
+
+	clean := path.Clean("/" + strings.TrimPrefix(route, "/"))
+	path := filepath.Join("/", "mnt", "user", filepath.FromSlash(strings.TrimPrefix(clean, "/")))
 
 	return c.JSON(200, s.core.Locate(path))
 }

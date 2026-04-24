@@ -3,7 +3,6 @@ package core
 import (
 	"fmt"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -35,9 +34,10 @@ func (c *Core) scatterPlanPrepare(setup domain.ScatterSetup) {
 		VDisks:        make(map[string]*domain.VDisk),
 	}
 
-	targets := make([]string, 0)
+	source := resolveStoragePath(setup.Source)
+	targets := make(map[string]bool)
 	for _, target := range setup.Targets {
-		targets = append(targets, filepath.Join("/", "mnt", target))
+		targets[resolveStoragePath(target)] = true
 	}
 
 	for _, disk := range c.state.Unraid.Disks {
@@ -46,8 +46,8 @@ func (c *Core) scatterPlanPrepare(setup domain.ScatterSetup) {
 			CurrentFree: disk.Free,
 			PlannedFree: disk.Free,
 			Bin:         nil,
-			Src:         filepath.Join("/", "mnt", setup.Source) == disk.Path,
-			Dst:         slices.Contains(targets, disk.Path),
+			Src:         source == disk.Path,
+			Dst:         targets[disk.Path],
 		}
 	}
 
@@ -78,6 +78,15 @@ func (c *Core) scatterPlanStart(plan *domain.Plan) {
 	// one of source disks, the other of destinations disks
 	// in scatter srcDisks will contain only one element
 	srcDisk, dstDisks := getSourceAndDestinationDisks(c.state.Unraid.Disks, plan)
+	if srcDisk == nil || len(dstDisks) == 0 {
+		msg := "Scatter plan requires one source disk and at least one target disk"
+		logger.Yellow(msg)
+		packet := &domain.Packet{Topic: common.EventOperationError, Payload: msg}
+		c.ctx.Hub.Pub(packet, "socket:broadcast")
+		return
+	}
+	planningDisks := append([]*domain.Disk{srcDisk}, dstDisks...)
+	blockSize := planBlockSize(c.state.Unraid.BlockSize, planningDisks...)
 
 	// get dest disks with more free space to the top
 	sort.Slice(dstDisks, func(i, j int) bool { return dstDisks[i].Free < dstDisks[j].Free })
@@ -93,9 +102,9 @@ func (c *Core) scatterPlanStart(plan *domain.Plan) {
 	packet := &domain.Packet{Topic: common.EventScatterPlanStarted, Payload: "Planning started"}
 	c.ctx.Hub.Pub(packet, "socket:broadcast")
 
-	c.printDisks(c.state.Unraid.Disks, c.state.Unraid.BlockSize)
+	c.printDisks(c.state.Unraid.Disks, blockSize)
 
-	items, ownerIssue, groupIssue, folderIssue, fileIssue := c.getItemsAndIssues(c.state.Status, c.state.Unraid.BlockSize, reItems, reStat, []*domain.Disk{srcDisk}, plan.ChosenFolders)
+	items, ownerIssue, groupIssue, folderIssue, fileIssue := c.getItemsAndIssues(c.state.Status, blockSize, reItems, reStat, []*domain.Disk{srcDisk}, plan.ChosenFolders)
 
 	toBeTransferred := make([]*domain.Item, 0)
 
@@ -137,7 +146,7 @@ func (c *Core) scatterPlanStart(plan *domain.Plan) {
 		ceil := lib.Max(common.ReservedSpace, reserved)
 		logger.Blue("scatterPlan:ItemsLeft(%d):ReservedSpace(%d)", len(items), ceil)
 
-		packer := algorithm.NewKnapsack(disk, items, ceil, c.state.Unraid.BlockSize)
+		packer := algorithm.NewKnapsack(disk, items, ceil, blockSize)
 		bin := packer.BestFit()
 		if bin != nil {
 			plan.VDisks[disk.Path].Bin = bin
@@ -209,7 +218,7 @@ func (c *Core) createScatterOperation(plan domain.Plan) *domain.Operation {
 	for _, disk := range c.state.Unraid.Disks {
 		vdisk := plan.VDisks[disk.Path]
 
-		if vdisk.Bin == nil || vdisk.Src {
+		if vdisk == nil || vdisk.Bin == nil || vdisk.Src {
 			continue
 		}
 

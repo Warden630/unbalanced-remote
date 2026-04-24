@@ -46,7 +46,7 @@ func (g *Greedy) fitBytes() *domain.Bin {
 		}
 	}
 
-	if bin.Size+g.buffer > g.disk.Free {
+	if bin.Size > g.disk.Free || g.buffer > g.disk.Free-bin.Size {
 		return nil
 	}
 
@@ -67,7 +67,7 @@ func (g *Greedy) fitBlocks() *domain.Bin {
 	// how many blocks are used in g.buffer bytes
 	buffer := g.buffer / g.blockSize
 
-	if bin.BlocksUsed+buffer > g.disk.BlocksFree {
+	if bin.BlocksUsed > g.disk.BlocksFree || buffer > g.disk.BlocksFree-bin.BlocksUsed {
 		return nil
 	}
 

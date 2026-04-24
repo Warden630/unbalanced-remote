@@ -12,6 +12,7 @@ type Disk struct {
 	Size        uint64 `json:"size"`
 	Serial      string `json:"serial"`
 	Status      string `json:"status"`
+	Remote      bool   `json:"remote"`
 	BlocksTotal uint64 `json:"-"`
 	BlocksFree  uint64 `json:"-"`
 }

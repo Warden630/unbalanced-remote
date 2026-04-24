@@ -32,7 +32,7 @@ func (c *Core) gatherPlanPrepare(setup domain.GatherSetup) {
 		VDisks:        make(map[string]*domain.VDisk),
 	}
 
-	for _, disk := range c.state.Unraid.Disks {
+	for _, disk := range localDisks(c.state.Unraid.Disks) {
 		plan.VDisks[disk.Path] = &domain.VDisk{
 			Path:        disk.Path,
 			CurrentFree: disk.Free,
@@ -55,9 +55,10 @@ func (c *Core) gatherPlanStart(plan *domain.Plan) {
 	packet := &domain.Packet{Topic: common.EventGatherPlanStarted, Payload: "Planning started"}
 	c.ctx.Hub.Pub(packet, "socket:broadcast")
 
-	c.printDisks(c.state.Unraid.Disks, c.state.Unraid.BlockSize)
+	disks := localDisks(c.state.Unraid.Disks)
+	c.printDisks(disks, c.state.Unraid.BlockSize)
 
-	items, ownerIssue, groupIssue, folderIssue, fileIssue := c.getItemsAndIssues(c.state.Status, c.state.Unraid.BlockSize, reItems, reStat, c.state.Unraid.Disks, plan.ChosenFolders)
+	items, ownerIssue, groupIssue, folderIssue, fileIssue := c.getItemsAndIssues(c.state.Status, c.state.Unraid.BlockSize, reItems, reStat, disks, plan.ChosenFolders)
 
 	// // no items found, no sense going on, just end this planning
 	// if len(items) == 0 {
@@ -86,7 +87,7 @@ func (c *Core) gatherPlanStart(plan *domain.Plan) {
 	// Initialize fields
 	plan.BytesToTransfer = 0
 
-	for _, disk := range c.state.Unraid.Disks {
+	for _, disk := range disks {
 		msg := fmt.Sprintf("Trying to allocate items to %s ...", disk.Name)
 		packet = &domain.Packet{Topic: common.EventGatherPlanProgress, Payload: msg}
 		c.ctx.Hub.Pub(packet, "socket:broadcast")
@@ -107,7 +108,7 @@ func (c *Core) gatherPlanStart(plan *domain.Plan) {
 		}
 	}
 
-	c.endPlan(c.state.Status, plan, c.state.Unraid.Disks, items, make([]*domain.Item, 0))
+	c.endPlan(c.state.Status, plan, disks, items, make([]*domain.Item, 0))
 	// p.bus.Pub(&pubsub.Message{Payload: plan}, common.IntScatterPlanFinished)
 	c.gatherPlanEnd(plan)
 }
@@ -157,7 +158,7 @@ func (c *Core) createGatherOperation(plan domain.Plan) *domain.Operation {
 		vdisk := plan.VDisks[disk.Path]
 
 		// only one disk will be destination (target)
-		if vdisk.Path != plan.Target {
+		if vdisk == nil || vdisk.Path != plan.Target {
 			continue
 		}
 

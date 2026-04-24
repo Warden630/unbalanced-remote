@@ -46,6 +46,39 @@ You'll likely come up with other scenarios as you play around with it.
 > [!IMPORTANT]
 > IMPORTANT: I suggest giving unbalanced exclusive access to disks (disable mover and/or any dockers that write to disks), so that free space calculation are not affected. If you're only reading data (streaming, etc.), it shouldn't be issue, although the operations may run slower.
 
+## Remote Mounted Directories / 远程挂载目录
+
+This fork adds Scatter support for remote directories that are already mounted on the Unraid host.
+
+本分支为 Scatter 增加了对“已经挂载到 Unraid 本机的远程目录”的支持。
+
+### English
+
+- Supported mode: Scatter only.
+- Supported remote locations: existing mounts under `/mnt`, such as Unassigned Devices SMB/NFS mounts under
+  `/mnt/remotes`, `/mnt/disks`, or `/mnt/addons`.
+- The plugin does not create SMB/NFS/SSH connections by itself. Mount the remote share first, then open unbalanced.
+- Remote mounts are shown together with array/cache disks and marked as `remote`.
+- Remote mounts can be used as a Scatter source or as Scatter target disks.
+- Scatter Move is allowed to remove source files/folders after rsync completes successfully, including when the source
+  is a remote mount.
+- Gather remains local-disk only in this fork.
+- Permission checks that are specific to Unraid array disks are skipped for remote mounts, because SMB/NFS/SSHFS mounts
+  often expose owners, groups, and modes differently from native Unraid disks.
+
+### 中文
+
+- 支持模式：目前只支持 Scatter。
+- 支持的远程位置：已经挂载在 `/mnt` 下的目录，例如 Unassigned Devices 创建的 SMB/NFS 挂载点：
+  `/mnt/remotes`、`/mnt/disks` 或 `/mnt/addons`。
+- 插件本身不会主动建立 SMB/NFS/SSH 连接。请先把远程共享挂载到 Unraid 本机，再打开 unbalanced。
+- 远程挂载会和 array/cache 磁盘一起显示，并带有 `remote` 标记。
+- 远程挂载既可以作为 Scatter source，也可以作为 Scatter target disk。
+- Scatter Move 在 rsync 成功后会删除源文件/目录；如果 source 是远程挂载，也允许删除远程源。
+- Gather 在本分支中仍然只支持本地磁盘。
+- 远程挂载会跳过 Unraid array 磁盘专属的权限检查，因为 SMB/NFS/SSHFS 暴露出来的 owner、group 和 mode
+  经常不同于原生 Unraid 磁盘。
+
 ## SCATTER Instructions
 
 Scatter will transfer data from a source disk into one or more target disks, according to your selection, by filling the target disks, sorted by free space available, as much as possible.
@@ -212,7 +245,7 @@ It was built with:
 - [Go](https://golang.org/) - Back End
 - [echo](https://github.com/labstack/echo) - REST and websocket api
 - [pubsub](https://github.com/cskr/pubsub) - Pub/Sub implementation
-- [React](https://facebook.github.io/react/) - Front End
+- [React](https://facebook.github.io/) - Front End
 - [zustand](https://github.com/pmndrs/zustand) - Flux/Redux-like React framework
 - [tailwind](https://tailwindcss.com) - Css framework
 - [vite](https://vitejs.dev) - Tooling

@@ -15,6 +15,11 @@ export const Disk: React.FunctionComponent<DiskProps> = ({ disk }) => {
           <span className="text-blue-800 dark:text-blue-800 font-bold">
             {disk.name}
           </span>
+          {disk.remote && (
+            <span className="ml-2 text-xs uppercase text-emerald-700 dark:text-emerald-600">
+              remote
+            </span>
+          )}
           <span className="text-sm">&nbsp;({disk.fsType})</span>
           <span className="px-1">-</span>
           <span>{humanBytes(disk.size)}</span>

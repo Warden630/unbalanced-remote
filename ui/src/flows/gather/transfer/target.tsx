@@ -43,7 +43,10 @@ export const Target: React.FunctionComponent = () => {
 
   // if no bin then this disk isn't elegible as a target
   const elegible = disks.filter(
-    (disk) => plan.vdisks[disk.path].bin && plan.vdisks[disk.path].bin.items,
+    (disk) =>
+      !disk.remote &&
+      plan.vdisks[disk.path].bin &&
+      plan.vdisks[disk.path].bin.items,
   );
 
   // sort elegible disks by least amount of data transfer

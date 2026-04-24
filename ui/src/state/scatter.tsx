@@ -17,8 +17,8 @@ interface ScatterStore {
     setSource: (source: string) => Promise<void>;
     loadBranch: (node: Node) => Promise<void>;
     toggleSelected: (node: Node) => void;
-    toggleTarget: (name: string) => void;
-    toggleAll: (names: string[]) => void;
+    toggleTarget: (path: string) => void;
+    toggleAll: (paths: string[]) => void;
     setBinDisk: (binDisk: string) => void;
   };
 }
@@ -39,6 +39,13 @@ const loaderNode = {
   parent: 'root',
 };
 
+const storageRoute = (path: string) => {
+  if (path.startsWith('/mnt/')) {
+    return path.slice('/mnt/'.length);
+  }
+  return path.replace(/^\/+/, '');
+};
+
 export const useScatterStore = create<ScatterStore>()(
   immer((set, get) => ({
     source: '',
@@ -57,11 +64,13 @@ export const useScatterStore = create<ScatterStore>()(
           state.source = source;
           state.targets = {};
           state.selected = [];
+          state.binDisk = '';
+          state.allTargetsChecked = false;
           state.tree.root.children = ['loader'];
           state.tree = { ...state.tree, loader };
         });
 
-        const route = `${get().source}/`;
+        const route = `${storageRoute(get().source)}/`;
         console.log('route ', route);
         const branch = await Api.getTree(route, 'root');
         // await new Promise((r) => setTimeout(r, 5000));
@@ -105,7 +114,10 @@ export const useScatterStore = create<ScatterStore>()(
           state.tree[node.id].children = ['loader'];
         });
 
-        const route = `${get().source}/${getAbsolutePath(node, get().tree)}`;
+        const route = `${storageRoute(get().source)}/${getAbsolutePath(
+          node,
+          get().tree,
+        )}`;
         console.log('route ', route);
         const branch = await Api.getTree(route, node.id);
         // await new Promise((r) => setTimeout(r, 5000));
@@ -166,30 +178,30 @@ export const useScatterStore = create<ScatterStore>()(
           removeChildren(node);
         });
       },
-      toggleTarget: (name: string) => {
+      toggleTarget: (path: string) => {
         set((state) => {
-          if (state.targets[name] === undefined) {
-            state.targets[name] = true;
+          if (state.targets[path] === undefined) {
+            state.targets[path] = true;
             return;
           }
 
-          delete state.targets[name];
+          delete state.targets[path];
           state.allTargetsChecked = false;
         });
       },
-      toggleAll: (names: string[]) => {
+      toggleAll: (paths: string[]) => {
         set((state) => {
           state.allTargetsChecked = !state.allTargetsChecked;
 
-          for (let i = 0; i < names.length; i++) {
-            if (names[i] === state.source) {
+          for (let i = 0; i < paths.length; i++) {
+            if (paths[i] === state.source) {
               continue;
             }
 
             if (state.allTargetsChecked) {
-              state.targets[names[i]] = true;
+              state.targets[paths[i]] = true;
             } else {
-              delete state.targets[names[i]];
+              delete state.targets[paths[i]];
             }
           }
         });

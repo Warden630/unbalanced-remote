@@ -42,8 +42,13 @@ func (k *Knapsack) BestFit() *domain.Bin {
 func (k *Knapsack) fitBytes() (bin *domain.Bin) {
 	sort.Slice(k.list, func(i, j int) bool { return k.list[i].Size > k.list[j].Size })
 
+	var capacity uint64
+	if k.disk.Free > k.buffer {
+		capacity = k.disk.Free - k.buffer
+	}
+
 	for _, item := range k.list {
-		if item.Size > (k.disk.Free - k.buffer) {
+		if item.Size > capacity {
 			k.over = append(k.over, item)
 		} else {
 			targetBin := -1
@@ -51,6 +56,9 @@ func (k *Knapsack) fitBytes() (bin *domain.Bin) {
 
 			for i, bin := range k.Bins {
 				binSpaceUsed := bin.Size
+				if binSpaceUsed > k.disk.Free || item.Size > k.disk.Free-binSpaceUsed {
+					continue
+				}
 				binSpaceLeft := k.disk.Free - binSpaceUsed - item.Size
 
 				if binSpaceLeft < remainingSpace && binSpaceLeft >= k.buffer {
@@ -85,9 +93,14 @@ func (k *Knapsack) fitBlocks() (bin *domain.Bin) {
 
 	// log.Printf("buffer %d\n", buffer)
 
+	var capacity uint64
+	if k.disk.BlocksFree > buffer {
+		capacity = k.disk.BlocksFree - buffer
+	}
+
 	for _, item := range k.list {
 		// log.Printf("item(%+v)\n", item)
-		if item.BlocksUsed > (k.disk.BlocksFree - buffer) {
+		if item.BlocksUsed > capacity {
 			// log.Println("if")
 			k.over = append(k.over, item)
 		} else {
@@ -99,6 +112,9 @@ func (k *Knapsack) fitBlocks() (bin *domain.Bin) {
 
 			for i, bin := range k.Bins {
 				binSpaceUsed := bin.BlocksUsed
+				if binSpaceUsed > k.disk.BlocksFree || item.BlocksUsed > k.disk.BlocksFree-binSpaceUsed {
+					continue
+				}
 				binSpaceLeft := k.disk.BlocksFree - binSpaceUsed - item.BlocksUsed
 
 				// log.Printf("bsu(%d)-bsl(%d)\n", binSpaceUsed, binSpaceLeft)

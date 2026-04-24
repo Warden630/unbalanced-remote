@@ -222,6 +222,8 @@ func getArrayData() (*domain.Unraid, error) {
 	unraid.Free = totalFree
 	unraid.BlockSize = blockSize
 
+	disks = appendRemoteDisks(disks)
+
 	sort.Slice(disks, func(i, j int) bool { return disks[i].ID < disks[j].ID })
 
 	unraid.Disks = disks
@@ -273,7 +275,7 @@ func (c *Core) Locate(path string) []string {
 	logger.Olive("path %s", path)
 	locations := make([]string, 0)
 
-	for _, disk := range c.state.Unraid.Disks {
+	for _, disk := range localDisks(c.state.Unraid.Disks) {
 		name := strings.Replace(path, "/mnt/user", "", 1)
 		entry := filepath.Join(disk.Path, name)
 

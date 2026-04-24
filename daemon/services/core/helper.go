@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -23,16 +24,30 @@ func getSourceAndDestinationDisks(disks []*domain.Disk, plan *domain.Plan) (*dom
 	dstDisks := make([]*domain.Disk, 0)
 
 	for _, disk := range disks {
-		if plan.VDisks[disk.Path].Src {
+		vdisk := plan.VDisks[disk.Path]
+		if vdisk == nil {
+			continue
+		}
+
+		if vdisk.Src {
 			srcDisk = disk
 		}
 
-		if plan.VDisks[disk.Path].Dst {
+		if vdisk.Dst {
 			dstDisks = append(dstDisks, disk)
 		}
 	}
 
 	return srcDisk, dstDisks
+}
+
+func resolveStoragePath(value string) string {
+	clean := path.Clean("/" + strings.TrimPrefix(filepath.ToSlash(value), "/"))
+	if clean == "/mnt" || strings.HasPrefix(clean, "/mnt/") {
+		return filepath.FromSlash(clean)
+	}
+
+	return filepath.Join("/", "mnt", filepath.FromSlash(strings.TrimPrefix(clean, "/")))
 }
 
 func getIssues(re *regexp.Regexp, disk *domain.Disk, path string) (int64, int64, int64, int64, error) {
@@ -145,6 +160,10 @@ func (c *Core) getItemsAndIssues(status, blockSize uint64, reItems, reStat *rege
 	// Get owner/permission issues
 	// Get items to be transferred
 	for _, disk := range disks {
+		if disk == nil {
+			continue
+		}
+
 		for _, path := range folders {
 			// logging
 			logger.Blue("scanning:disk(%s):folder(%s)", disk.Path, path)
@@ -156,16 +175,20 @@ func (c *Core) getItemsAndIssues(status, blockSize uint64, reItems, reStat *rege
 			packet = &domain.Packet{Topic: getTopic(status), Payload: "Checking issues ..."}
 			c.ctx.Hub.Pub(packet, "socket:broadcast")
 
-			ownIssue, grpIssue, fldIssue, filIssue, err := getIssues(reStat, disk, path)
-			if err != nil {
-				logger.Yellow("issues:not-available:(%s)", err)
+			if disk.Remote {
+				logger.Blue("issues:skipped-remote-mount:(%s)", disk.Path)
 			} else {
-				ownerIssue += ownIssue
-				groupIssue += grpIssue
-				folderIssue += fldIssue
-				fileIssue += filIssue
+				ownIssue, grpIssue, fldIssue, filIssue, err := getIssues(reStat, disk, path)
+				if err != nil {
+					logger.Yellow("issues:not-available:(%s)", err)
+				} else {
+					ownerIssue += ownIssue
+					groupIssue += grpIssue
+					folderIssue += fldIssue
+					fileIssue += filIssue
 
-				logger.Blue("issues:owner(%d):group(%d):folder(%d):file(%d)", ownIssue, grpIssue, fldIssue, filIssue)
+					logger.Blue("issues:owner(%d):group(%d):folder(%d):file(%d)", ownIssue, grpIssue, fldIssue, filIssue)
+				}
 			}
 
 			// get children files/folders to be transferred
@@ -288,12 +311,13 @@ func (c *Core) endPlan(status uint64, plan *domain.Plan, disks []*domain.Disk, i
 	logger.Blue("%s:ItemsLeft(%d)", getName(status), len(items))
 	logger.Blue("%s:Listing (%d) disks ...", getName(status), len(disks))
 	for _, disk := range disks {
-		if plan.VDisks[disk.Path].Bin != nil {
+		vdisk := plan.VDisks[disk.Path]
+		if vdisk != nil && vdisk.Bin != nil {
 			logger.Blue("=========================================================")
-			logger.Blue("disk(%s):items(%d)-(%s):currentFree(%s)-plannedFree(%s)", disk.Path, len(plan.VDisks[disk.Path].Bin.Items), lib.ByteSize(plan.VDisks[disk.Path].Bin.Size), lib.ByteSize(disk.Free), lib.ByteSize(plan.VDisks[disk.Path].PlannedFree))
+			logger.Blue("disk(%s):items(%d)-(%s):currentFree(%s)-plannedFree(%s)", disk.Path, len(vdisk.Bin.Items), lib.ByteSize(vdisk.Bin.Size), lib.ByteSize(disk.Free), lib.ByteSize(vdisk.PlannedFree))
 			logger.Blue("---------------------------------------------------------")
 
-			for _, item := range plan.VDisks[disk.Path].Bin.Items {
+			for _, item := range vdisk.Bin.Items {
 				logger.Blue("[%s] %s", lib.ByteSize(item.Size), item.Name)
 			}
 

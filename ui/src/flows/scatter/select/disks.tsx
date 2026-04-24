@@ -12,7 +12,7 @@ export const Disks: React.FunctionComponent = () => {
   const selected = useScatterSource();
   const { setSource } = useScatterActions();
 
-  const onDiskClick = (disk: IDisk) => () => setSource(disk.name);
+  const onDiskClick = (disk: IDisk) => () => setSource(disk.path);
 
   return (
     <Panel title="Source Disk">
@@ -20,7 +20,7 @@ export const Disks: React.FunctionComponent = () => {
         <Selectable
           key={disk.id}
           onClick={onDiskClick(disk)}
-          selected={disk.name === selected}
+          selected={disk.path === selected}
         >
           <Disk disk={disk} />
         </Selectable>

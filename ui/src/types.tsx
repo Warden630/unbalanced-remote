@@ -49,6 +49,7 @@ export interface Disk {
   size: number;
   serial: string;
   status: string;
+  remote: boolean;
   blocksTotal: number;
   blocksFree: number;
 }

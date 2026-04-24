@@ -21,10 +21,10 @@ export const Targets: React.FunctionComponent = () => {
   const { toggleTarget, toggleAll } = useScatterActions();
 
   const visible = source !== '';
-  const elegible = disks.filter((disk) => disk.name !== source);
+  const elegible = disks.filter((disk) => disk.path !== source);
 
-  const onCheck = (disk: IDisk) => () => toggleTarget(disk.name);
-  const onToggleAll = () => toggleAll(disks.map((d) => d.name));
+  const onCheck = (disk: IDisk) => () => toggleTarget(disk.path);
+  const onToggleAll = () => toggleAll(disks.map((d) => d.path));
 
   return (
     <Panel
@@ -37,8 +37,8 @@ export const Targets: React.FunctionComponent = () => {
     >
       {visible &&
         elegible.map((disk) => (
-          <div className="flex flex-row items-center">
-            <Checkbox checked={targets[disk.name]} onCheck={onCheck(disk)} />
+          <div key={disk.path} className="flex flex-row items-center">
+            <Checkbox checked={targets[disk.path]} onCheck={onCheck(disk)} />
             <div className="pr-4" />
             <Disk disk={disk} />
           </div>
