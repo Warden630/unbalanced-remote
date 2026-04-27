@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unbalance/daemon/common"
 	"unbalance/daemon/domain"
 	"unbalance/daemon/lib"
 	"unbalance/daemon/logger"
@@ -201,7 +202,7 @@ func getArrayData() (*domain.Unraid, error) {
 			disk.BlocksFree = stat.Bavail
 
 			//
-			if int64(blockSize) != stat.Bsize {
+			if blockSize != uint64(stat.Bsize) {
 				if !hasBlockSize {
 					blockSize = uint64(stat.Bsize)
 				} else {
@@ -298,7 +299,7 @@ func (c *Core) Locate(path string) []string {
 }
 
 func (c *Core) GetLog() []string {
-	cmd := "tail -n 100 /var/log/unbalanced.log"
+	cmd := "tail -n 100 /var/log/" + common.PluginName + ".log"
 
 	log := make([]string, 0)
 

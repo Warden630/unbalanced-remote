@@ -193,11 +193,11 @@ func (c *Core) commandInterrupted(opName string, operation *domain.Operation, co
 	operation.Finished = time.Now()
 	elapsed := time.Since(operation.Started)
 
-	subject := fmt.Sprintf("unbalanced - %s operation INTERRUPTED", strings.ToUpper(opName))
+	subject := fmt.Sprintf("%s - %s operation INTERRUPTED", common.PluginName, strings.ToUpper(opName))
 	headline := fmt.Sprintf("Command Interrupted: %s (%s)", cmd, err.Error()+" : "+getError(err.Error(), reRsync, rsyncErrors))
 
-	logger.Yellow(headline)
-	packet := &domain.Packet{Topic: common.EventOperationError, Payload: fmt.Sprintf("%s operation was interrupted. Check log (/var/log/unbalanced.log) for additional details.", opName)}
+	logger.Yellow("%s", headline)
+	packet := &domain.Packet{Topic: common.EventOperationError, Payload: fmt.Sprintf("%s operation was interrupted. Check log (/var/log/%s.log) for additional details.", opName, common.PluginName)}
 	c.ctx.Hub.Pub(packet, "socket:broadcast")
 
 	operation.BytesTransferred += cmdTransferred
@@ -216,7 +216,7 @@ func (c *Core) commandInterrupted(opName string, operation *domain.Operation, co
 
 func (c *Core) commandCompleted(operation *domain.Operation, command *domain.Command) {
 	text := "Command Finished"
-	logger.Blue(text)
+	logger.Blue("%s", text)
 
 	operation.BytesTransferred += command.Size
 	percent, left, _ := progress(operation.BytesToTransfer, operation.BytesTransferred, time.Since(operation.Started))
@@ -252,7 +252,7 @@ func (c *Core) handleItemDeletion(operation *domain.Operation, command *domain.C
 
 			packet := &domain.Packet{Topic: common.EventTransferProgress, Payload: operation}
 			c.ctx.Hub.Pub(packet, "socket:broadcast")
-			logger.Yellow(msg)
+			logger.Yellow("%s", msg)
 
 			return
 		}
@@ -267,7 +267,7 @@ func (c *Core) handleItemDeletion(operation *domain.Operation, command *domain.C
 			logger.Blue("removing:(%s)", rmrf)
 
 			err := lib.Shell(rmrf, "", func(line string) {
-				logger.Blue(line)
+				logger.Blue("%s", line)
 			})
 
 			if err != nil {
@@ -277,7 +277,7 @@ func (c *Core) handleItemDeletion(operation *domain.Operation, command *domain.C
 				packet := &domain.Packet{Topic: common.EventTransferProgress, Payload: operation}
 				c.ctx.Hub.Pub(packet, "socket:broadcast")
 
-				logger.Yellow(msg)
+				logger.Yellow("%s", msg)
 			}
 
 			if operation.OpKind == common.OpGatherMove {
@@ -296,7 +296,7 @@ func (c *Core) handleItemDeletion(operation *domain.Operation, command *domain.C
 					logger.Blue("pruning:(%s)", rmdir)
 
 					err = lib.Shell(rmdir, "", func(line string) {
-						logger.Blue(line)
+						logger.Blue("%s", line)
 					})
 
 					if err != nil {
@@ -306,7 +306,7 @@ func (c *Core) handleItemDeletion(operation *domain.Operation, command *domain.C
 						packet := &domain.Packet{Topic: common.EventTransferProgress, Payload: operation}
 						c.ctx.Hub.Pub(packet, "socket:broadcast")
 
-						logger.Yellow(msg)
+						logger.Yellow("%s", msg)
 					}
 				} else {
 					logger.Yellow("skipping:prune:(%s)", filepath.Join(command.Src, parent))
@@ -322,7 +322,7 @@ func (c *Core) operationCompleted(opName string, operation *domain.Operation, co
 	operation.Finished = time.Now()
 	elapsed := operation.Finished.Sub(operation.Started)
 
-	subject := fmt.Sprintf("unbalanced - %s operation completed", strings.ToUpper(opName))
+	subject := fmt.Sprintf("%s - %s operation completed", common.PluginName, strings.ToUpper(opName))
 	headline := fmt.Sprintf("%s operation has finished", opName)
 
 	percent, left, _ := progress(operation.BytesToTransfer, operation.BytesTransferred, elapsed)
@@ -333,7 +333,33 @@ func (c *Core) operationCompleted(opName string, operation *domain.Operation, co
 	operation.Speed = speed
 	operation.Remaining = left.String()
 
+	c.cleanupSelectedSourceDirs(operation)
+
 	c.endOperation(subject, headline, commandsExecuted, operation)
+}
+
+func (c *Core) cleanupSelectedSourceDirs(operation *domain.Operation) {
+	if operation.DryRun || operation.OpKind != common.OpScatterMove {
+		return
+	}
+
+	for _, dir := range operation.CleanupDirs {
+		if dir == "" {
+			continue
+		}
+
+		operation.Line = fmt.Sprintf("Pruning selected source folder %s", dir)
+		packet := &domain.Packet{Topic: common.EventTransferProgress, Payload: operation}
+		c.ctx.Hub.Pub(packet, "socket:broadcast")
+
+		prune := fmt.Sprintf(`find "%s" -depth -type d -empty -delete`, dir)
+		logger.Blue("pruning:selected:(%s)", prune)
+		if err := lib.Shell(prune, "", func(line string) {
+			logger.Blue("%s", line)
+		}); err != nil {
+			logger.Yellow("Unable to prune selected source folder (%s): %s", dir, err)
+		}
+	}
 }
 
 func (c *Core) endOperation(subject, headline string, commands []string, operation *domain.Operation) {
@@ -405,7 +431,7 @@ func (c *Core) performRemoveSource(operation *domain.Operation, cmd *domain.Comm
 
 		text := "Removal completed"
 		operation.Line = text
-		logger.Blue(text)
+		logger.Blue("%s", text)
 
 		c.state.Unraid = c.refreshUnraid()
 		c.state.History.Items[operation.ID] = operation

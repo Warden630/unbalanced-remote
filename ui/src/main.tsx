@@ -17,6 +17,9 @@ import { Validation as ScatterValidation } from '~/flows/scatter/transfer/valida
 import { Gather } from '~/flows/gather/gather';
 import { Select as GatherSelect } from '~/flows/gather/select/select';
 import { Targets } from '~/flows/gather/transfer/targets';
+import { Cleanup } from '~/flows/cleanup/cleanup';
+import { Select as CleanupSelect } from '~/flows/cleanup/select/select';
+import { Confirm as CleanupConfirm } from '~/flows/cleanup/confirm/confirm';
 import { History } from '~/flows/history/history';
 import { Settings } from '~/flows/settings/settings';
 import { Notifications } from '~/flows/settings/notifications';
@@ -87,6 +90,21 @@ const router = createBrowserRouter([
                 element: <Transfer />,
               },
             ],
+          },
+        ],
+      },
+      {
+        path: '/cleanup',
+        element: <Cleanup />,
+        children: [
+          { index: true, element: <Navigate to="/cleanup/select" replace /> },
+          {
+            path: 'select',
+            element: <CleanupSelect />,
+          },
+          {
+            path: 'confirm',
+            element: <CleanupConfirm />,
           },
         ],
       },

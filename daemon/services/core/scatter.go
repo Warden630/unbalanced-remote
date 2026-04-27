@@ -80,13 +80,12 @@ func (c *Core) scatterPlanStart(plan *domain.Plan) {
 	srcDisk, dstDisks := getSourceAndDestinationDisks(c.state.Unraid.Disks, plan)
 	if srcDisk == nil || len(dstDisks) == 0 {
 		msg := "Scatter plan requires one source disk and at least one target disk"
-		logger.Yellow(msg)
+		logger.Yellow("%s", msg)
 		packet := &domain.Packet{Topic: common.EventOperationError, Payload: msg}
 		c.ctx.Hub.Pub(packet, "socket:broadcast")
 		return
 	}
-	planningDisks := append([]*domain.Disk{srcDisk}, dstDisks...)
-	blockSize := planBlockSize(c.state.Unraid.BlockSize, planningDisks...)
+	itemBlockSize := c.state.Unraid.BlockSize
 
 	// get dest disks with more free space to the top
 	sort.Slice(dstDisks, func(i, j int) bool { return dstDisks[i].Free < dstDisks[j].Free })
@@ -102,9 +101,9 @@ func (c *Core) scatterPlanStart(plan *domain.Plan) {
 	packet := &domain.Packet{Topic: common.EventScatterPlanStarted, Payload: "Planning started"}
 	c.ctx.Hub.Pub(packet, "socket:broadcast")
 
-	c.printDisks(c.state.Unraid.Disks, blockSize)
+	c.printDisks(c.state.Unraid.Disks, itemBlockSize)
 
-	items, ownerIssue, groupIssue, folderIssue, fileIssue := c.getItemsAndIssues(c.state.Status, blockSize, reItems, reStat, []*domain.Disk{srcDisk}, plan.ChosenFolders)
+	items, ownerIssue, groupIssue, folderIssue, fileIssue := c.getItemsAndIssues(c.state.Status, itemBlockSize, reItems, reStat, []*domain.Disk{srcDisk}, plan.ChosenFolders)
 
 	toBeTransferred := make([]*domain.Item, 0)
 
@@ -146,7 +145,7 @@ func (c *Core) scatterPlanStart(plan *domain.Plan) {
 		ceil := lib.Max(common.ReservedSpace, reserved)
 		logger.Blue("scatterPlan:ItemsLeft(%d):ReservedSpace(%d)", len(items), ceil)
 
-		packer := algorithm.NewKnapsack(disk, items, ceil, blockSize)
+		packer := algorithm.NewKnapsack(disk, items, ceil, diskBlockSize(itemBlockSize, disk))
 		bin := packer.BestFit()
 		if bin != nil {
 			plan.VDisks[disk.Path].Bin = bin
@@ -203,6 +202,7 @@ func (c *Core) createScatterOperation(plan domain.Plan) *domain.Operation {
 		OpKind:          c.state.Status,
 		BytesToTransfer: plan.BytesToTransfer,
 		DryRun:          c.ctx.DryRun,
+		CleanupDirs:     make([]string, 0),
 	}
 
 	operation.RsyncArgs = append([]string{common.RsyncArgs}, c.ctx.RsyncArgs...)
@@ -214,6 +214,11 @@ func (c *Core) createScatterOperation(plan domain.Plan) *domain.Operation {
 	operation.RsyncStrArgs = strings.Join(operation.RsyncArgs, " ")
 
 	operation.Commands = make([]*domain.Command, 0)
+	remoteTransfer := false
+	srcDisk, _ := getSourceAndDestinationDisks(c.state.Unraid.Disks, &plan)
+	if operation.OpKind == common.OpScatterMove && srcDisk != nil {
+		operation.CleanupDirs = selectedSourceDirs(srcDisk.Path, plan.ChosenFolders)
+	}
 
 	for _, disk := range c.state.Unraid.Disks {
 		vdisk := plan.VDisks[disk.Path]
@@ -233,6 +238,11 @@ func (c *Core) createScatterOperation(plan domain.Plan) *domain.Operation {
 				entry = item.Path
 			}
 
+			srcDisk := diskByPath(c.state.Unraid.Disks, item.Location)
+			if disk.Remote || (srcDisk != nil && srcDisk.Remote) {
+				remoteTransfer = true
+			}
+
 			operation.Commands = append(operation.Commands, &domain.Command{
 				ID:     shortid.MustGenerate(),
 				Src:    item.Location,
@@ -242,6 +252,11 @@ func (c *Core) createScatterOperation(plan domain.Plan) *domain.Operation {
 				Status: common.CmdPending,
 			})
 		}
+	}
+
+	if remoteTransfer {
+		operation.RsyncArgs = remoteRsyncArgs(operation.RsyncArgs)
+		operation.RsyncStrArgs = strings.Join(operation.RsyncArgs, " ")
 	}
 
 	return operation

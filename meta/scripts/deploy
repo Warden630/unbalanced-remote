@@ -7,7 +7,7 @@ set -u
 
 patch="${1:-}"
 
-name="unbalanced"
+name="unbalanced-remote"
 
 # Get the current date in the specified format
 version=$(date '+%Y.%m.%d')
@@ -17,24 +17,34 @@ version=$(date '+%Y.%m.%d')
 # make local
 cd ui && npm run build && cd ..
 
-go build fmt
-env CGO_ENABLED=0 go build -ldflags "-X main.Version=$version$patch" -v -o meta/plugin/$name
+env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.Version=$version$patch" -v -o /tmp/$name
 
-echo "$version$patch" >meta/plugin/VERSION
+pkgdir=$(mktemp -d)
+trap 'rm -rf "$pkgdir"' EXIT
 
-cd meta
-mv plugin unbalanced
-tar --owner=root --group=root -czvf ../$name-$version$patch.tgz unbalanced
-cd ..
+mkdir -p "$pkgdir/$name"
+cp -R meta/plugin/. "$pkgdir/$name/"
+cp /tmp/$name "$pkgdir/$name/$name"
+echo "$version$patch" >"$pkgdir/$name/VERSION"
+chmod +x "$pkgdir/$name/$name" "$pkgdir/$name/scripts/start" "$pkgdir/$name/scripts/stop"
+
+tar --owner=root --group=root -czvf "$name-$version$patch.tgz" -C "$pkgdir" "$name"
 
 # Calculate the MD5 checksum for the plugin
 md5=$(md5sum $name-$version$patch.tgz | awk '{print $1}')
 
-# Get the latest git tag
-latest_tag=$(git describe --tags --abbrev=0)
+# Generate the changelog since the latest tag, or from the whole history if this
+# fork has not published a tag yet.
+latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || true)
+if [ -n "$latest_tag" ]; then
+	changes=$(git log --oneline "$latest_tag"..HEAD --pretty="- %s")
+else
+	changes=$(git log --oneline --pretty="- %s")
+fi
 
-# Generate the changelog since the latest tag
-changes=$(git log --oneline $latest_tag..HEAD --pretty="- %s")
+if [ -z "$changes" ]; then
+	changes="- Release $name $version$patch"
+fi
 
 # Use awk for replacements and generate plugin file
 awk -v version="$version$patch" -v md5="$md5" -v changes="$changes" '
@@ -48,11 +58,10 @@ awk -v version="$version$patch" -v md5="$md5" -v changes="$changes" '
 
 # release the plugin
 # Create a release with the tag name
-gh release create $version$patch -n "$changes"
+gh release create $version$patch --title "$name $version$patch" -n "$changes"
 
 # Upload the TGZ artifact
 gh release upload $version$patch ./$name-$version$patch.tgz --clobber
 
 # Upload the XML artifact
 gh release upload $version$patch ./$name.plg --clobber
-

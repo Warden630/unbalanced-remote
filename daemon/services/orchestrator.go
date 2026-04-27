@@ -5,6 +5,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"unbalance/daemon/common"
 	"unbalance/daemon/domain"
 	"unbalance/daemon/logger"
 	"unbalance/daemon/services/core"
@@ -22,7 +23,7 @@ func CreateOrchestrator(ctx *domain.Context) *Orchestrator {
 }
 
 func (o *Orchestrator) Run() error {
-	logger.Blue("starting unbalanced %s ...", o.ctx.Version)
+	logger.Blue("starting %s %s ...", common.PluginName, o.ctx.Version)
 
 	core := core.Create(o.ctx)
 	server := server.Create(o.ctx, core)

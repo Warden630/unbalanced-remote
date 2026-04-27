@@ -134,6 +134,25 @@ export interface Plan {
   target: string; // used for gather operations
 }
 
+export interface CleanupItem {
+  path: string;
+  full: string;
+  disk: string;
+  name: string;
+  dir: boolean;
+  files: number;
+  folders: number;
+  size: number;
+}
+
+export interface CleanupPlan {
+  source: string;
+  items: CleanupItem[];
+  totalFiles: number;
+  totalFolders: number;
+  totalSize: number;
+}
+
 export interface State {
   status: number;
   unraid: Unraid | null;

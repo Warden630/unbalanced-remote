@@ -1,11 +1,11 @@
 <?xml version='1.0' standalone='yes'?>
 
 <!DOCTYPE PLUGIN [
-<!ENTITY name        "unbalanced">
-<!ENTITY author      "Juan B. Rodriguez">
+<!ENTITY name        "unbalanced-remote">
+<!ENTITY author      "Juan B. Rodriguez &amp; Walden">
 <!ENTITY version     "##version##">
 <!ENTITY launch      "Settings/&name;">
-<!ENTITY pluginURL   "https://github.com/jbrodriguez/unbalance/releases/latest/download/&name;.plg">
+<!ENTITY pluginURL   "https://github.com/Warden630/unbalance/releases/latest/download/&name;.plg">
 <!ENTITY bundle      "&name;-&version;.tgz">
 <!ENTITY md5         "##md5##">
 ]>
@@ -26,26 +26,26 @@ The plugin frees up space from a disk array in unRAID systems.
 -->
 
 <!--
-Get the unbalanced bundle.
+Get the unbalanced-remote bundle.
 -->
 <FILE Name="/boot/config/plugins/&name;/&bundle;">
-<URL>"https://github.com/jbrodriguez/unbalance/releases/download/&version;/&bundle;"</URL>
+<URL>"https://github.com/Warden630/unbalance/releases/download/&version;/&bundle;"</URL>
 <MD5>&md5;</MD5>
 </FILE>
 
 <!-- Install default plugin cfg  -->
-<FILE Name="/boot/config/plugins/unbalanced/unbalanced.cfg">
+<FILE Name="/boot/config/plugins/unbalanced-remote/unbalanced-remote.cfg">
 <INLINE>
 <![CDATA[
 SERVICE="disable"
-PORT="7090"
+PORT="7091"
 RUNAS="nobody"
 ]]>
 </INLINE>
 </FILE>
 
 <!-- Install default plugin env  -->
-<FILE Name="/boot/config/plugins/unbalanced/unbalanced.env">
+<FILE Name="/boot/config/plugins/unbalanced-remote/unbalanced-remote.env">
 <INLINE>
 <![CDATA[
 DRY_RUN=true
@@ -65,7 +65,7 @@ Prepare for installation.
 -->
 <FILE Run="/bin/bash">
 <INLINE>
-running=$(pidof unbalanced | wc -w)
+running=$(pidof unbalanced-remote | wc -w)
 
 # Remove emhttp files so we can re-install.
 rm -rf /usr/local/emhttp/plugins/&name;/* 2>/dev/null
@@ -82,7 +82,7 @@ if [ $running -eq 1 ]; then
 fi
 
 echo "-----------------------------------------------------------"
-echo " unbalanced has been installed."
+echo " unbalanced-remote has been installed."
 echo " Copyright (c) &author;"
 echo " Version: &version;"
 echo "-----------------------------------------------------------"
@@ -102,7 +102,7 @@ rm -rf /boot/config/plugins/&name;
 
 echo ""
 echo "-----------------------------------------------------------"
-echo " unbalanced has been removed."
+echo " unbalanced-remote has been removed."
 echo " Copyright (c) &author;"
 echo " Version: &version;"
 echo "-----------------------------------------------------------"
@@ -110,16 +110,16 @@ echo ""
 </INLINE>
 </FILE>
 
-<FILE Name="/tmp/unbalanced-chkconf" Run="/bin/bash">
+<FILE Name="/tmp/unbalanced-remote-chkconf" Run="/bin/bash">
 <INLINE>
 <![CDATA[
 #!/bin/sh
 # This will check each entry in the config so nothing is missing, and if missing, sets to default
-CFGFILE=/boot/config/plugins/unbalanced/unbalanced.cfg
+CFGFILE=/boot/config/plugins/unbalanced-remote/unbalanced-remote.cfg
 [ ! `cat "$CFGFILE" | grep SERVICE` ] && echo "SERVICE=\"disable\"" >> "$CFGFILE"
-[ ! `cat "$CFGFILE" | grep ^PORT` ] && echo "PORT=\"7090\"" >> "$CFGFILE"
+[ ! `cat "$CFGFILE" | grep ^PORT` ] && echo "PORT=\"7091\"" >> "$CFGFILE"
 [ ! `cat "$CFGFILE" | grep RUNAS` ] && echo "RUNAS=\"nobody\"" >> "$CFGFILE"
-rm /tmp/unbalanced-chkconf
+rm /tmp/unbalanced-remote-chkconf
 ]]>
 </INLINE>
 </FILE>

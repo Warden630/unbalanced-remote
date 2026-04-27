@@ -1,0 +1,81 @@
+Menu="Utilities"
+Icon="unbalanced.png"
+Title="unbalanced-remote"
+---
+<?php
+$sName = "unbalanced-remote";
+$plugin_cfg = parse_plugin_cfg("unbalanced-remote");
+$plugin_service = isset($plugin_cfg['SERVICE']) ? $plugin_cfg['SERVICE'] : "disable";
+$plugin_port = (isset($plugin_cfg['PORT']) && is_numeric($plugin_cfg['PORT']) && $plugin_cfg['PORT'] > 0 && $plugin_cfg['PORT'] < 65535) ? $plugin_cfg['PORT'] : "7091";
+$plugin_running = shell_exec("pidof unbalanced-remote | wc -w");
+$plugin_version = shell_exec("cat /usr/local/emhttp/plugins/unbalanced-remote/VERSION | tr '\n' ' '");
+?>
+
+<script type="text/javascript">
+	var port = <?=$plugin_port;?>;
+	var url = 'http://' + document.location.hostname + ':' + port + '/';
+	var isRunning = <?=$plugin_running;?> === 1;
+	var version = '<?=$plugin_version;?>';
+	if (isRunning) {
+		document.write("<a style='color:green;' target='_blank' href='" + url + "' title='unbalanced-remote plugin'><b>Open Web UI ( v" + version + ")</b></a>");
+	} else {
+		document.write("<b><font style='color:orange;'>unbalanced-remote v" + version + "</font></b>")
+	}
+</script>
+
+<form markdown="1" name="unbalanced_remote_settings" method="POST" action="/update.php" target="progressFrame">
+<input type="hidden" name="#file" value="unbalanced-remote/unbalanced-remote.cfg" />
+<input type="hidden" id="command" name="#command" value="" />
+
+Enable unbalanced-remote server:
+: <select id="SERVICE" name="SERVICE" size="1" onChange="checkRUNNING(this.form);">
+  <?=mk_option($plugin_service, "disable", "No");?>
+  <?=mk_option($plugin_service, "enable", "Yes");?>
+  </select>
+
+Port:
+: <input id="PORT" type="text" class="stopped" name="PORT" maxlength="40" value="<?=$plugin_port;?>" title="port must be 0-65535" placeholder="Default Port is 7091" >
+
+<input id="DEFAULT" class="stopped" type="submit" value="Default" onClick="resetDATA(this.form)">
+: <input id="btnApply" type="submit" value="Apply" onClick="verifyDATA(this.form)"><input type="button" value="Done" onClick="done()">
+</form>
+
+<script type="text/javascript">
+$(function(){
+	showStatus('<?=$sName;?>');
+	checkRUNNING(document.unbalanced_remote_settings);
+});
+
+function resetDATA(form) {
+	form.PORT.value = "7091";
+}
+
+function checkRUNNING(form) {
+	if (<?=$plugin_running;?> == 1)
+	{
+		$(".stopped").prop("disabled", true);
+		form.btnApply.disabled = "disabled";
+   }
+   else
+	$(".stopped").prop("disabled", (form.SERVICE.value == "enable"));
+	if (form.SERVICE.value == "enable")
+		form.command.value = "/usr/local/emhttp/plugins/unbalanced-remote/scripts/start";
+	else {
+		form.command.value = "/usr/local/emhttp/plugins/unbalanced-remote/scripts/stop";
+		form.btnApply.disabled = (form.SERVICE.value == "enable");
+	}
+}
+
+function verifyDATA(form) {
+	if (isNaN(form.PORT.value)){
+		form.PORT.value = "7091";
+	} else {
+		if (form.PORT.value < 0 || form.PORT.value > 65535){
+			form.PORT.value = "7091";
+		}
+	}
+	form.SERVICE.value = form.SERVICE.value.replace(/ /g,"_");
+	form.PORT.value = form.PORT.value.replace(/ /g,"_");
+}
+
+</script>

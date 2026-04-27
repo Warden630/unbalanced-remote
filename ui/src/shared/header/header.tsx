@@ -47,6 +47,18 @@ export const Header: React.FunctionComponent = () => {
           </StatefulLink>
 
           <StatefulLink
+            to="/cleanup"
+            className={({ isActive }) => {
+              return isActive
+                ? 'ml-4 underline underline-offset-8 font-medium dark:text-white text-sky-900'
+                : 'ml-4';
+            }}
+            disabled={busy}
+          >
+            CLEANUP
+          </StatefulLink>
+
+          <StatefulLink
             to="/history"
             className={({ isActive }) => {
               return isActive

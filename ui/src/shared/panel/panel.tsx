@@ -24,7 +24,7 @@ export const Panel: React.FunctionComponent<PanelProps> = ({
   }, [scrollToTop]);
 
   return (
-    <div className="h-full flex flex-col bg-neutral-100 dark:bg-gray-950">
+    <div className="h-full w-full flex-1 min-w-0 flex flex-col bg-neutral-100 dark:bg-gray-950">
       {title.length > 0 ? (
         <div className="flex flex-col pt-2 px-2">
           <div className="flex flex-row gap-4 items-start justify-start pb-2">

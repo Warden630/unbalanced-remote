@@ -23,6 +23,7 @@ type Operation struct {
 	RsyncArgs        []string   `json:"rsyncArgs"`
 	RsyncStrArgs     string     `json:"rsyncStrArgs"`
 	Commands         []*Command `json:"commands"`
+	CleanupDirs      []string   `json:"cleanupDirs"`
 
 	// progress section
 	Completed     float64 `json:"completed"`

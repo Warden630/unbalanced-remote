@@ -1,6 +1,6 @@
 #!/bin/sh
 
-prog="unbalanced"
+prog="unbalanced-remote"
 running=$(pidof $prog | wc -w)
 
 # no-op if already running

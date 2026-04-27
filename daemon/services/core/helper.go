@@ -153,6 +153,28 @@ func getItems(blockSize uint64, re *regexp.Regexp, src, folder string) ([]*domai
 	return items, total, err
 }
 
+func selectedSourceDirs(src string, folders []string) []string {
+	dirs := make([]string, 0, len(folders))
+	seen := make(map[string]bool)
+
+	for _, folder := range folders {
+		fullPath := filepath.Clean(filepath.Join(src, folder))
+		if seen[fullPath] {
+			continue
+		}
+
+		info, err := os.Stat(fullPath)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+
+		dirs = append(dirs, fullPath)
+		seen[fullPath] = true
+	}
+
+	return dirs
+}
+
 func (c *Core) getItemsAndIssues(status, blockSize uint64, reItems, reStat *regexp.Regexp, disks []*domain.Disk, folders []string) ([]*domain.Item, int64, int64, int64, int64) {
 	var ownerIssue, groupIssue, folderIssue, fileIssue int64
 	items := make([]*domain.Item, 0)
@@ -217,7 +239,7 @@ func (c *Core) sendTimeFeedbackToFrontend(topic, fended string, elapsed time.Dur
 }
 
 func (c *Core) sendMailFeedback(fstarted, ffinished string, elapsed time.Duration, plan *domain.Plan, notTransferred string) {
-	subject := "unbalanced - PLANNING completed"
+	subject := common.PluginName + " - PLANNING completed"
 	message := fmt.Sprintf("\n\nStarted: %s\nEnded: %s\n\nElapsed: %s", fstarted, ffinished, elapsed)
 	if notTransferred != "" {
 		switch c.ctx.Config.NotifyPlan {
@@ -235,9 +257,9 @@ func (c *Core) sendMailFeedback(fstarted, ffinished string, elapsed time.Duratio
 			\n%d file(s)/folder(s) with a group other than 'users'
 			\n%d folder(s) with a permission other than 'drwxrwxrwx'
 			\n%d files(s) with a permission other than '-rw-rw-rw-' or '-r--r--r--'
-			\n\nCheck the log file (/var/log/unbalanced.log) for additional information
+			\n\nCheck the log file (/var/log/%s.log) for additional information
 			\n\nIt's strongly suggested to install the Fix Common Plugins and run the Docker Safe New Permissions command
-		`, plan.OwnerIssue, plan.GroupIssue, plan.FolderIssue, plan.FileIssue)
+		`, plan.OwnerIssue, plan.GroupIssue, plan.FolderIssue, plan.FileIssue, common.PluginName)
 	}
 
 	if sendErr := sendmail(c.ctx.Config.NotifyPlan, subject, message, false); sendErr != nil {
@@ -430,7 +452,7 @@ func (c *Core) notifyCommandsToRun(opName string, operation *domain.Operation) {
 		message += cmd + "\n"
 	}
 
-	subject := fmt.Sprintf("unbalanced - %s operation STARTED", strings.ToUpper(opName))
+	subject := fmt.Sprintf("%s - %s operation STARTED", common.PluginName, strings.ToUpper(opName))
 
 	go func() {
 		if sendErr := sendmail(c.ctx.NotifyTransfer, subject, message, c.ctx.DryRun); sendErr != nil {
@@ -492,7 +514,7 @@ func sendmail(notify int, subject, message string, dryRun bool) (err error) {
 
 	msg := dry + message
 
-	cmd := exec.Command(mailCmd, "-e", "unbalanced operation update", "-s", subject, "-m", msg)
+	cmd := exec.Command(mailCmd, "-e", common.PluginName+" operation update", "-s", subject, "-m", msg)
 	err = cmd.Run()
 
 	return

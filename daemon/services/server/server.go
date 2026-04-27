@@ -75,6 +75,8 @@ func (s *Server) Start() error {
 
 	api.GET("/tree/:route", s.getTree)
 	api.GET("/locate/:route", s.locate)
+	api.POST("/cleanup/plan", s.cleanupPlan)
+	api.POST("/cleanup/delete", s.cleanupDelete)
 	api.GET("/logs", s.getLog)
 	api.PUT("/config/dryRun", s.toggleDryRun)
 	api.PUT("/config/notifyPlan", s.setNotifyPlan)
@@ -217,6 +219,34 @@ func (s *Server) locate(c echo.Context) error {
 	path := filepath.Join("/", "mnt", "user", filepath.FromSlash(strings.TrimPrefix(clean, "/")))
 
 	return c.JSON(200, s.core.Locate(path))
+}
+
+func (s *Server) cleanupPlan(c echo.Context) error {
+	var setup domain.CleanupSetup
+	if err := c.Bind(&setup); err != nil {
+		return err
+	}
+
+	plan, err := s.core.CleanupPlan(setup)
+	if err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	return c.JSON(200, plan)
+}
+
+func (s *Server) cleanupDelete(c echo.Context) error {
+	var setup domain.CleanupSetup
+	if err := c.Bind(&setup); err != nil {
+		return err
+	}
+
+	plan, err := s.core.CleanupDelete(setup)
+	if err != nil {
+		return echo.NewHTTPError(400, err.Error())
+	}
+
+	return c.JSON(200, plan)
 }
 
 func (s *Server) getLog(c echo.Context) error {

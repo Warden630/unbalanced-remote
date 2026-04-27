@@ -1,4 +1,4 @@
-import { State, Op, Branch } from '~/types';
+import { State, Op, Branch, CleanupPlan } from '~/types';
 
 export class Api {
   static host = `${document.location.protocol}//${document.location.host}/api`;
@@ -52,6 +52,36 @@ export class Api {
         order: [],
       };
     }
+  }
+
+  static async cleanupPlan(
+    source: string,
+    items: string[],
+  ): Promise<CleanupPlan> {
+    const response = await fetch(`${Api.host}/cleanup/plan`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source, items }),
+    });
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+    return response.json();
+  }
+
+  static async cleanupDelete(
+    source: string,
+    items: string[],
+  ): Promise<CleanupPlan> {
+    const response = await fetch(`${Api.host}/cleanup/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source, items }),
+    });
+    if (!response.ok) {
+      throw new Error(await response.text());
+    }
+    return response.json();
   }
 
   static async locate(path: string): Promise<Array<string>> {

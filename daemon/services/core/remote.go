@@ -145,9 +145,9 @@ func isRemoteMount(mount mountInfo) bool {
 
 func remoteDiskName(mountPoint string) string {
 	clean := filepath.Clean(mountPoint)
-	name := strings.TrimPrefix(clean, "/mnt/")
-	if name == clean {
-		name = filepath.Base(clean)
+	name := filepath.Base(clean)
+	if idx := strings.Index(name, "_"); idx >= 0 && idx < len(name)-1 {
+		return name[idx+1:]
 	}
 	return name
 }
@@ -163,11 +163,57 @@ func localDisks(disks []*domain.Disk) []*domain.Disk {
 	return result
 }
 
-func planBlockSize(defaultBlockSize uint64, disks ...*domain.Disk) uint64 {
+func diskByPath(disks []*domain.Disk, path string) *domain.Disk {
 	for _, disk := range disks {
-		if disk != nil && disk.Remote {
-			return 0
+		if disk.Path == path {
+			return disk
 		}
 	}
+	return nil
+}
+
+func diskBlockSize(defaultBlockSize uint64, disk *domain.Disk) uint64 {
+	if disk != nil && disk.Remote {
+		return 0
+	}
+
 	return defaultBlockSize
+}
+
+func remoteRsyncArgs(args []string) []string {
+	result := make([]string, 0, len(args)+3)
+	for _, arg := range args {
+		switch arg {
+		case "-X", "--xattrs":
+			continue
+		}
+
+		if strings.HasPrefix(arg, "-") && !strings.HasPrefix(arg, "--") && strings.Contains(arg, "X") {
+			arg = strings.ReplaceAll(arg, "X", "")
+			if arg == "-" {
+				continue
+			}
+		}
+
+		result = append(result, arg)
+	}
+
+	return appendMissingRsyncArgs(result, "--no-perms", "--no-owner", "--no-group")
+}
+
+func appendMissingRsyncArgs(args []string, values ...string) []string {
+	for _, value := range values {
+		found := false
+		for _, arg := range args {
+			if arg == value {
+				found = true
+				break
+			}
+		}
+		if !found {
+			args = append(args, value)
+		}
+	}
+
+	return args
 }

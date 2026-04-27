@@ -23,6 +23,8 @@ export const Footer: React.FunctionComponent = () => {
         >
           Juan B. Rodriguez
         </a>
+        <span className="text-slate-500 dark:text-slate-600 mx-1">&amp;</span>
+        <span className="text-lime-600">Walden</span>
       </div>
       <div className="text-lime-600">
         <span>unbalanced</span>

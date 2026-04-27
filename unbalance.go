@@ -9,6 +9,7 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"unbalance/daemon/cmd"
+	"unbalance/daemon/common"
 	"unbalance/daemon/domain"
 )
 
@@ -17,7 +18,7 @@ var Version string
 // const ReservedSpace int64 = 512 * 1024 * 1024 // 512Mb
 
 var cli struct {
-	Port    string `default:"7090" help:"port to listen on"`
+	Port    string `default:"7091" help:"port to listen on"`
 	LogsDir string `default:"/var/log" help:"directory to store logs"`
 
 	// Config vars
@@ -43,7 +44,7 @@ func main() {
 	ctx := kong.Parse(&cli)
 
 	log.SetOutput(&lumberjack.Logger{
-		Filename:   filepath.Join(cli.LogsDir, "unbalanced.log"),
+		Filename:   filepath.Join(cli.LogsDir, common.PluginName+".log"),
 		MaxSize:    10, // megabytes
 		MaxBackups: 10,
 		MaxAge:     28, //days

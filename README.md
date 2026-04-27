@@ -1,316 +1,144 @@
-# unbalanced
+# unbalanced-remote
 
-_tl;dr_ **unbalanced** is an [Unraid](https://unraid.net/) plugin to transfer files/folders between disks in your array.
+`unbalanced-remote` is a fork of the Unraid plugin
+[unbalanced](https://github.com/jbrodriguez/unbalance). It installs beside the
+original plugin and adds support for scattering data to or from already mounted
+SMB/NFS locations.
 
-## Support Fund
+Chinese documentation is available in [README.zh-CN.md](README.zh-CN.md).
 
-If you wish to do so, read how to [support the developer](https://jbrio.net/unbalanced).
+## Why This Fork Exists
 
-## [Changelog](https://github.com/jbrodriguez/unbalance/releases)
+The original `unbalanced` is focused on moving data between Unraid array/cache
+disks. This fork is for users who also have network shares mounted on the Unraid
+host and want to use them as Scatter sources or targets.
 
-## Screenshot
+Typical examples:
 
-![Home](meta/images/scatter-select.png)
-
-## Introduction
-
-unbalanced helps you manage space in your Unraid array, via two operating modes:
-
-- **Scatter**<br/> Transfer data out of a disk, into one or more disks
-
-- **Gather**<br/> Consolidate data from a user share into a single disk
-
-It's versatile and can serve multiple purposes, based on your needs.
-
-Some of the use cases are:
-
-- Empty a disk, in order to change filesystems (read
-  [kizer's example](https://forums.unraid.net/topic/43651-plug-in-unbalance/page/2/#comment-431428))
-- Move all seasons of a tv show into a single disk
-- Move a specific folder from a disk to another disk
-- Split your movies/tv shows/games folder from a disk to other disks
-
-You'll likely come up with other scenarios as you play around with it.
-
-## Core Features
-
-- **Makes sure to fill the target disk(s) as much as possible, without running out of space**<br> If it can't transfer
-  some files/folders, it will inform you in the console and via notifications (if you set them up in the settings),
-  before any actual transfer takes place.
-
-- **Operates in the background**<br> You can close your browser while the transfer operation is ongoing. It will keep
-  transferring files on the server and show you the current progress as soon as you reopen the browser.
-
-- **Transfer operations work at the disk level (not at the user share level)**<br> This avoids file/folder clobbering.
-
-> [!IMPORTANT]
-> IMPORTANT: I suggest giving unbalanced exclusive access to disks (disable mover and/or any dockers that write to disks), so that free space calculation are not affected. If you're only reading data (streaming, etc.), it shouldn't be issue, although the operations may run slower.
-
-## Remote Mounted Directories / 远程挂载目录
-
-This fork adds Scatter support for remote directories that are already mounted on the Unraid host.
-
-本分支为 Scatter 增加了对“已经挂载到 Unraid 本机的远程目录”的支持。
-
-### English
-
-- Supported mode: Scatter only.
-- Supported remote locations: existing mounts under `/mnt`, such as Unassigned Devices SMB/NFS mounts under
-  `/mnt/remotes`, `/mnt/disks`, or `/mnt/addons`.
-- The plugin does not create SMB/NFS/SSH connections by itself. Mount the remote share first, then open unbalanced.
-- Remote mounts are shown together with array/cache disks and marked as `remote`.
-- Remote mounts can be used as a Scatter source or as Scatter target disks.
-- Scatter Move is allowed to remove source files/folders after rsync completes successfully, including when the source
-  is a remote mount.
-- Gather remains local-disk only in this fork.
-- Permission checks that are specific to Unraid array disks are skipped for remote mounts, because SMB/NFS/SSHFS mounts
-  often expose owners, groups, and modes differently from native Unraid disks.
-
-### 中文
-
-- 支持模式：目前只支持 Scatter。
-- 支持的远程位置：已经挂载在 `/mnt` 下的目录，例如 Unassigned Devices 创建的 SMB/NFS 挂载点：
-  `/mnt/remotes`、`/mnt/disks` 或 `/mnt/addons`。
-- 插件本身不会主动建立 SMB/NFS/SSH 连接。请先把远程共享挂载到 Unraid 本机，再打开 unbalanced。
-- 远程挂载会和 array/cache 磁盘一起显示，并带有 `remote` 标记。
-- 远程挂载既可以作为 Scatter source，也可以作为 Scatter target disk。
-- Scatter Move 在 rsync 成功后会删除源文件/目录；如果 source 是远程挂载，也允许删除远程源。
-- Gather 在本分支中仍然只支持本地磁盘。
-- 远程挂载会跳过 Unraid array 磁盘专属的权限检查，因为 SMB/NFS/SSHFS 暴露出来的 owner、group 和 mode
-  经常不同于原生 Unraid 磁盘。
-
-## SCATTER Instructions
-
-Scatter will transfer data from a source disk into one or more target disks, according to your selection, by filling the target disks, sorted by free space available, as much as possible.
-
-> [!NOTE]
-> Scatter doesn't distribute data evenly across disks. It will fill up the first disk, then the second, and so on.
-
-It involves the following steps:
-
-**1 - Select** <br/>
-Choose the source disk, select the files/folders you want to transfer and choose the target disk(s).
-![Select](meta/images/scatter-select.png)
-
-**2 - Plan** <br/>
-The logic is:
-
-- Get the contents of the selected files/folders from the source disk
-- Order the target disks by free space available
-- For each target disk, calculate how much it can be filled up with files/folder from the source disk, leaving some
-  headroom (currently set at 1Gb).
-
-Additionally, it will check files/folders permissions, to warn about potential issues during the transfer stage.
-![Plan](meta/images/scatter-plan.png)
-
-**3 - Transfer** <br/> You can either MOVE or COPY the files.
-
-- MOVE <br/> Will first copy the files/folders into the target disk(s), and delete them as soon as the copy is finished.
-
-- COPY <br/> Will simply transfer the files/folders into the other disk(s).<br/> **NOTE**: Beware that COPY doesn't
-  delete files/folders on the source disk, so you will be essentially duplicating the data.
-
-~~Internally, all move operations are handled by [diskmv](https://github.com/trinapicot/Unraid-diskmv).~~
-
-Internally, it issues a slight variation of
-[this rsync command](https://forums.unraid.net/topic/35815-re-format-xfs-on-replacement-drive-convert-from-rfs-to-xfs-discussion-only/page/12/#comment-445880).
-
-Check [this post](https://forums.unraid.net/topic/43651-plug-in-unbalance/page/11/#comment-471957) for additional
-information.
-![Transfer](meta/images/scatter-transfer.png)
-
-**4 - Validate (optional)** <br/> VALIDATE will only be enabled for a SCATTER / COPY operation. Just click the Validate
-button in the [History](#history) screen and the operation will be replayed, but with checksum comparisons (instead of
-the simpler size/modification time check).
-
-When using default flags, VALIDATE rsync will be invoked as **-rcvPRX**.
-
-## GATHER Instructions
-
-GATHER will consolidate data from a user share into a single disk.
-
-It involves the following steps:
-
-**1 - Select**
-
-The 'Shares' column lets you navigate your user shares, to choose a folder to consolidate
-
-When a folder is selected, the current selection and the drives where this folder is located are displayed in the 'Presence' column.
-
-Once you've chosen the folder, click NEXT.
-![Select](meta/images/gather-select.png)
-
-**2 - Plan**
-The logic is:
-
-- Find the drives where the folder is located and how much space they occupy
-- Calculate how much data needs to be transferred to each potential target disk
-
-Additionally, it will check files/folders permissions, to warn about potential issues during the transfer stage.
-
-![Plan](meta/images/gather-plan.png)
-
-**3 - Move** <br/>
-
-This page shows which drives have enough space to hold the contents of the folder chosen in the previous step.
-
-They are shown in descending order by how little data transfer will be required.
-
-A star next to a drive means that the folder is present there.
-
-Choose a target disk, then click Move to start the transfer operation.
-![Transfer](meta/images/gather-transfer.png)
+- Move media from a cache/NVMe disk to a NAS share mounted under `/mnt/remotes`.
+- Move selected folders from an NFS/SMB mount back to an Unraid disk.
+- Clean up unwanted files or empty folders from local disks or mounted shares.
 
 ## Installation
 
-There are 2 ways to install this application
+Manual install URL:
 
-- Apps Tab (Community Application)<br/> Go to the Apps tab<br/> Click on the Plugins button (the last one)<br/> Look for
-  unbalanced<br/> Click Install
+```text
+https://github.com/Warden630/unbalance/releases/latest/download/unbalanced-remote.plg
+```
 
-- Plugins Tab (manual)<br/> Go to the Plugins tab<br/> Click on Install Plugin<br/> Paste the following address in the
-  input field: <https://github.com/jbrodriguez/unbalance/releases/latest/download/unbalanced.plg><br/> Click Install
+In the Unraid Web GUI:
 
-## Running the app
+1. Go to **Plugins**.
+2. Choose **Install Plugin**.
+3. Paste the URL above.
+4. Install the plugin.
 
-After installing the plugin, you can access the web UI, via the following methods:
+The plugin installs as `unbalanced-remote`, uses port `7091` by default, and
+keeps separate config, log, and history files. It can be installed at the same
+time as the original `unbalanced` plugin.
 
-- Method 1<br/> Go to Settings > Utilities<br/> Click on unbalanced<br/> Click on Open Web UI<br/>
+## Features
 
-- Method 2<br/> Go to Plugins > Installed Plugins<br/> Click on unbalanced<br/> Click on Open Web UI<br/>
+- **Scatter to/from mounted SMB/NFS shares**: Existing mounts under `/mnt`, such
+  as Unassigned Devices mounts under `/mnt/remotes`, `/mnt/disks`, or
+  `/mnt/addons`, are shown together with local disks.
+- **No gather-to-remote behavior**: Gather remains local-disk only.
+- **Remote-safe rsync flags**: When either side of a Scatter transfer is remote,
+  the transfer avoids xattrs, owner, group, and permission preservation that many
+  SMB/NFS mounts cannot support.
+- **Mixed local/remote planning**: Local XFS/Btrfs disks still use block-aware
+  capacity planning, while remote mounts use byte-based planning.
+- **Cleanup page**: Select files or folders by disk/mount, review file count,
+  folder count, total size, and disk path, then permanently delete after a second
+  confirmation.
+- **Parallel install**: The binary, plugin page, config files, logs, and history
+  are named separately from the original plugin.
 
-- Method 3<br/> Navigate with your browser to http(s)://Tower:7090/ (replace Tower with the address/name of your Unraid
-  server)<br/>
+## Supported Remote Mounts
 
-## Other Features
+This fork is intended for SMB and NFS mounts that already exist on the Unraid
+host. It does not create or manage network mounts for you.
 
-### Transfer
+Before opening `unbalanced-remote`, mount the share with Unassigned Devices or
+your preferred Unraid method. The mount must be under `/mnt`.
 
-Here you can monitor the progress of an operation. It shows overall metrics, as well as each invididual command as they
-unfold.
+Common supported paths:
 
-![Transfer](meta/images/transfer.png)
+- `/mnt/remotes/...`
+- `/mnt/disks/...`
+- `/mnt/addons/...`
 
-### History
+Only mounted paths with SMB/CIFS or NFS filesystem types are treated as remote
+disks.
 
-unbalanced keeps a history of the operations you have run, showing each command that was executed.
+## Cleanup Safety
 
-You can replay the most recent operation (excluding dry-runs) or validate the most recent Scatter Copy.
+Cleanup deletes files permanently. There is no recycle bin.
 
-Additionally, you can review operations which contain one or more flagged rsync commands.
+The UI shows a review page before deletion, then asks for final confirmation
+with:
 
-If an rsync command has been flagged (applies to Gather and Scatter/Move operations), unbalanced will not delete the source folders/files.
+- selected folder count
+- selected file count
+- contained folder count
+- contained file count
+- total size
 
-This allows you to check the issue in detail and take any action deemed necessary.
+The backend also rejects unsafe paths, root mount paths such as `/mnt` and
+`/mnt/user`, and deletion attempts while another operation is running.
 
-Once you've done that, you can delete the source folders/files through the UI, if you want.
+## Running
 
-![History](meta/images/history.png)
+After installation, open the plugin from:
 
-### Settings
+- **Settings > Utilities > unbalanced-remote**
+- **Plugins > Installed Plugins > unbalanced-remote**
+- `http://<your-unraid-host>:7091/`
 
-These are pretty much straigthforward.
+## Building Locally
 
-A word of caution with the custom rsync flags: it's for **power users** only.
+Requirements:
 
-unbalanced is optimized to work with the default flags, you must be VERY knowledgeable in rsync if you want to add any
-flag.
+- Go 1.26+
+- Node.js and npm
 
-![Settings](meta/images/settings.png)
+Build the frontend and run tests:
 
-### Log
+```bash
+npm --prefix ui run build
+go test ./...
+```
 
-![Log](meta/images/log.png)
+Build a Linux amd64 binary:
 
-## Videos
+```bash
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+  -ldflags "-X main.Version=2026.04.28-remote" \
+  -o unbalanced-remote
+```
 
-> NOTE: this refers to an older version of unbalanced, but the concepts are the same.
+## Release
 
-Thanks to gridrunner (Unraid forum member), you can watch unbalanced in action !
+Maintainers can create a GitHub release through the workflow in
+`.github/workflows/release.yml`, or locally with:
 
-[Must Have Unraid Plugins - Part 3 Disk Utility Plugins](https://www.youtube.com/watch?v=Wz4-YlH1lTk)
+```bash
+./meta/scripts/deploy
+```
 
-The discussion specific to unbalanced starts [here](https://youtu.be/Wz4-YlH1lTk?t=859).
+Release assets:
+
+- `unbalanced-remote.plg`
+- `unbalanced-remote-<version>.tgz`
 
 ## Credits
 
-~~This app uses the [diskmv](https://github.com/trinapicot/unraid-diskmv) script (check the
-[forum thread](https://forums.unraid.net/topic/34547-diskmv-a-set-of-utilities-to-move-files-between-disks/) for additional information).~~
+This fork is based on
+[jbrodriguez/unbalance](https://github.com/jbrodriguez/unbalance).
 
-The icon was graciously created by
-[hernandito](https://forums.unraid.net/topic/38028-docker-unbalance/#comment-368452) (fellow Unraid forums member)
+Original unbalanced author: Juan B. Rodriguez.
 
-It was built with:
+Remote scatter and cleanup fork: Walden.
 
-- [Go](https://golang.org/) - Back End
-- [echo](https://github.com/labstack/echo) - REST and websocket api
-- [pubsub](https://github.com/cskr/pubsub) - Pub/Sub implementation
-- [React](https://facebook.github.io/) - Front End
-- [zustand](https://github.com/pmndrs/zustand) - Flux/Redux-like React framework
-- [tailwind](https://tailwindcss.com) - Css framework
-- [vite](https://vitejs.dev) - Tooling
-
-## Development environment
-
-- setup go development environment
-- setup node development environment
-- clone repository
-- make release on root folder will create unbalanced binary (with embedded website)
-- transfer binary to unraid server
-- run unbalanced on the command line (do a ps aux | grep unbalanced first, to check how to invoke it)
-- (optional) if you want to do some ui debugging, set up a proxy on vite.config.ts
-
-### original
-
-```js
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
-import path from "path";
-
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-});
-```
-
-### modified
-
-```js
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import tsconfigPaths from "vite-tsconfig-paths";
-import path from "path";
-
-// https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
-  server: {
-    proxy: {
-      "/api": {
-        target: "http(s)://<unraid-server>:7090",
-      },
-    },
-  },
-});
-```
-
-then run `npm run dev` and point your browser to the endpoint returned by this command (generally <http://localhost:5173>)
-
-## Activity
-
-![Alt](https://repobeats.axiom.co/api/embed/c5745d8699df25ff4e087e691f104aeeda2bd17b.svg "Repobeats analytics image")
-
-## License
-
-MIT
+License: MIT.

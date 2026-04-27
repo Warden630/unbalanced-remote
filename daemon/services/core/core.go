@@ -19,7 +19,6 @@ const (
 	certDir    = "/boot/config/ssl/certs"
 	mailCmd    = "/usr/local/emhttp/webGui/scripts/notify"
 	timeFormat = "Jan _2, 2006 15:04:05"
-	settings   = "/boot/config/plugins/unbalanced"
 )
 
 var (
@@ -310,7 +309,7 @@ func (c *Core) SetRefreshRate(value int) *domain.Config {
 }
 
 func (c *Core) saveSettings() error {
-	location := filepath.Join(settings, "unbalanced.env")
+	location := filepath.Join(common.PluginLocation, common.PluginName+".env")
 	return lib.SaveEnv(location, c.ctx.Config)
 }
 
