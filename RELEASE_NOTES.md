@@ -13,7 +13,7 @@ Highlights:
 - Uses remote-compatible rsync options when either transfer side is remote.
 - Keeps local disk planning block-aware when local and remote targets are mixed.
 - Displays remote mount names by share suffix, for example
-  `/mnt/remotes/192.168.31.3_video` as `video`.
+  `/mnt/remotes/nas_media` as `media`.
 - Uses a separate default port, config, log, and history path from the original
   `unbalanced` plugin.
 
@@ -35,8 +35,8 @@ https://github.com/Warden630/unbalanced-remote/releases/latest/download/unbalanc
 - 新增 Cleanup 页面，可以先查看文件/文件夹数量和容量，再二次确认永久删除。
 - 当传输任一端是远程挂载点时，使用更兼容远程 SMB/NFS 的 rsync 参数。
 - 本地和远程目标混用时，本地磁盘仍然按 block 规划容量。
-- 远程挂载点显示为共享名后缀，例如 `/mnt/remotes/192.168.31.3_video`
-  显示为 `video`。
+- 远程挂载点显示为共享名后缀，例如 `/mnt/remotes/nas_media`
+  显示为 `media`。
 - 使用独立端口、配置、日志和历史记录路径，不覆盖原版 `unbalanced`。
 
 安装地址：
