@@ -24,7 +24,7 @@ Scatter 的来源或目标。
 手动安装地址：
 
 ```text
-https://github.com/Warden630/unbalance/releases/latest/download/unbalanced-remote.plg
+https://github.com/Warden630/unbalanced-remote/releases/latest/download/unbalanced-remote.plg
 ```
 
 在 Unraid Web GUI 中：

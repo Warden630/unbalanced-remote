@@ -24,7 +24,7 @@ Typical examples:
 Manual install URL:
 
 ```text
-https://github.com/Warden630/unbalance/releases/latest/download/unbalanced-remote.plg
+https://github.com/Warden630/unbalanced-remote/releases/latest/download/unbalanced-remote.plg
 ```
 
 In the Unraid Web GUI:

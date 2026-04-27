@@ -5,7 +5,7 @@
 <!ENTITY author      "Juan B. Rodriguez &amp; Walden">
 <!ENTITY version     "##version##">
 <!ENTITY launch      "Settings/&name;">
-<!ENTITY pluginURL   "https://github.com/Warden630/unbalance/releases/latest/download/&name;.plg">
+<!ENTITY pluginURL   "https://github.com/Warden630/unbalanced-remote/releases/latest/download/&name;.plg">
 <!ENTITY bundle      "&name;-&version;.tgz">
 <!ENTITY md5         "##md5##">
 ]>
@@ -29,7 +29,7 @@ The plugin frees up space from a disk array in unRAID systems.
 Get the unbalanced-remote bundle.
 -->
 <FILE Name="/boot/config/plugins/&name;/&bundle;">
-<URL>"https://github.com/Warden630/unbalance/releases/download/&version;/&bundle;"</URL>
+<URL>"https://github.com/Warden630/unbalanced-remote/releases/download/&version;/&bundle;"</URL>
 <MD5>&md5;</MD5>
 </FILE>
 

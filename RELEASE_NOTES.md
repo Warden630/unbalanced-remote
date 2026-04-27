@@ -20,7 +20,7 @@ Highlights:
 Install URL:
 
 ```text
-https://github.com/Warden630/unbalance/releases/latest/download/unbalanced-remote.plg
+https://github.com/Warden630/unbalanced-remote/releases/latest/download/unbalanced-remote.plg
 ```
 
 ## 中文
@@ -42,5 +42,5 @@ https://github.com/Warden630/unbalance/releases/latest/download/unbalanced-remot
 安装地址：
 
 ```text
-https://github.com/Warden630/unbalance/releases/latest/download/unbalanced-remote.plg
+https://github.com/Warden630/unbalanced-remote/releases/latest/download/unbalanced-remote.plg
 ```
