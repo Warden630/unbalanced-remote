@@ -20,7 +20,8 @@ cd ui && npm run build && cd ..
 env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-X main.Version=$version$patch" -v -o /tmp/$name
 
 pkgdir=$(mktemp -d)
-trap 'rm -rf "$pkgdir"' EXIT
+changes_file=""
+trap 'rm -rf "$pkgdir" ${changes_file:+"$changes_file"}' EXIT
 
 mkdir -p "$pkgdir/$name"
 cp -R meta/plugin/. "$pkgdir/$name/"
@@ -46,13 +47,27 @@ if [ -z "$changes" ]; then
 	changes="- Release $name $version$patch"
 fi
 
-# Use awk for replacements and generate plugin file
-awk -v version="$version$patch" -v md5="$md5" -v changes="$changes" '
+changes_file=$(mktemp)
+printf "%s\n" "$changes" >"$changes_file"
+
+# Use awk for replacements and generate plugin file. Read the changelog from a
+# file so multi-line release notes work on both GNU awk and BSD awk.
+awk -v version="$version$patch" -v md5="$md5" -v changes_file="$changes_file" '
+  BEGIN {
+    while ((getline line < changes_file) > 0) {
+      changes = changes sep line;
+      sep = "\n";
+    }
+    close(changes_file);
+  }
   {
     gsub(/##version##/, version);
     gsub(/##md5##/, md5);
-    gsub(/##changes##/, changes);
-    print $0;
+    if ($0 == "##changes##") {
+      print changes;
+    } else {
+      print $0;
+    }
   }
 ' meta/template/$name.plg >$name.plg
 
