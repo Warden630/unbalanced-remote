@@ -219,6 +219,10 @@ func (c *Core) GetConfig() *domain.Config {
 }
 
 func (c *Core) GetState() *domain.State {
+	if c.state.Status == common.OpNeutral {
+		c.state.Unraid = c.refreshUnraid()
+	}
+
 	return c.state
 }
 

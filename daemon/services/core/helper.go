@@ -153,6 +153,70 @@ func getItems(blockSize uint64, re *regexp.Regexp, src, folder string) ([]*domai
 	return items, total, err
 }
 
+func getSelectedItem(blockSize uint64, src, folder string) ([]*domain.Item, uint64, error) {
+	srcFolder := filepath.Join(src, folder)
+
+	fi, err := os.Stat(srcFolder)
+	if os.IsNotExist(err) {
+		return nil, 0, err
+	}
+	if err != nil {
+		return nil, 0, err
+	}
+
+	size, err := apparentSize(srcFolder)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	itemSize := size
+	if fi.IsDir() && itemSize == 0 {
+		// Keep empty directories eligible for planning without adding bytes to the transfer total.
+		itemSize = 1
+	}
+
+	item := &domain.Item{
+		Name:       srcFolder,
+		Size:       itemSize,
+		Path:       folder,
+		Location:   src,
+		BlocksUsed: blocksUsed(itemSize, blockSize),
+	}
+
+	return []*domain.Item{item}, size, nil
+}
+
+func apparentSize(root string) (uint64, error) {
+	var total uint64
+
+	err := filepath.WalkDir(root, func(_ string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+
+		if info.Size() > 0 {
+			total += uint64(info.Size())
+		}
+
+		return nil
+	})
+
+	return total, err
+}
+
+func blocksUsed(size, blockSize uint64) uint64 {
+	if blockSize == 0 {
+		return 0
+	}
+
+	return uint64(math.Ceil(float64(size) / float64(blockSize)))
+}
+
 func selectedSourceDirs(src string, folders []string) []string {
 	dirs := make([]string, 0, len(folders))
 	seen := make(map[string]bool)
@@ -217,7 +281,14 @@ func (c *Core) getItemsAndIssues(status, blockSize uint64, reItems, reStat *rege
 			packet = &domain.Packet{Topic: getTopic(status), Payload: "Getting items ..."}
 			c.ctx.Hub.Pub(packet, "socket:broadcast")
 
-			list, total, err := getItems(blockSize, reItems, disk.Path, path)
+			var list []*domain.Item
+			var total uint64
+			var err error
+			if disk.Remote {
+				list, total, err = getSelectedItem(blockSize, disk.Path, path)
+			} else {
+				list, total, err = getItems(blockSize, reItems, disk.Path, path)
+			}
 			if err != nil {
 				logger.Yellow("items:not-available:(%s)", err)
 			} else {

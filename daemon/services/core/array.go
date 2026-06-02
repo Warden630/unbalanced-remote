@@ -63,13 +63,13 @@ func (c *Core) getCertificate() string {
 }
 
 func (c *Core) getStatus() (*domain.Unraid, error) {
-	return getArrayData()
+	return getArrayDataFn()
 }
 
 func (c *Core) refreshUnraid() *domain.Unraid {
 	unraid := c.state.Unraid
 
-	newunraid, err := getArrayData()
+	newunraid, err := c.getStatus()
 	if err != nil {
 		logger.Yellow("Unable to get storage: %s", err)
 		return unraid
@@ -77,6 +77,8 @@ func (c *Core) refreshUnraid() *domain.Unraid {
 
 	return newunraid
 }
+
+var getArrayDataFn = getArrayData
 
 func getArrayData() (*domain.Unraid, error) {
 	unraid := &domain.Unraid{}
